@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# 密钥与本地配置（不要提交/打包）
+.env
+
+# Node
+node_modules/
+dist/
+
+# 运行时数据（数据库、向量库、上传文件——若要保留数据请单独复制）
+data/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统/日志
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: #292524;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, opacity, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Markdown-style chat content */
+.chat-content { line-height: 1.7; word-break: break-word; }
+.chat-content > :first-child { margin-top: 0; }
+.chat-content > :last-child { margin-bottom: 0; }
+.chat-content p { margin: 0.5em 0; }
+.chat-content h1, .chat-content h2, .chat-content h3, .chat-content h4 { margin: 1em 0 0.5em; font-weight: 600; line-height: 1.3; }
+.chat-content h1 { font-size: 1.35em; }
+.chat-content h2 { font-size: 1.2em; }
+.chat-content h3 { font-size: 1.1em; }
+.chat-content h4 { font-size: 1em; }
+.chat-content ul, .chat-content ol { padding-left: 1.5em; margin: 0.5em 0; }
+.chat-content ul { list-style: disc; }
+.chat-content ol { list-style: decimal; }
+.chat-content li { margin: 0.2em 0; }
+.chat-content strong { font-weight: 600; }
+.chat-content a { color: #2563eb; text-decoration: underline; }
+.chat-content code { background: #f5f2e8; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.chat-content pre { background: #1e1e1e; color: #e5e5e5; padding: 0.9em 1em; border-radius: 8px; overflow-x: auto; margin: 0.6em 0; }
+.chat-content pre code { background: transparent; padding: 0; color: inherit; font-size: 0.85em; }
+.chat-content blockquote { border-left: 3px solid #588157; padding-left: 1em; color: #78716c; margin: 0.5em 0; }
+.chat-content hr { border: none; border-top: 1px solid #e7e5e4; margin: 1em 0; }
+.chat-content table { border-collapse: collapse; margin: 0.6em 0; width: 100%; font-size: 0.9em; display: block; overflow-x: auto; }
+.chat-content th, .chat-content td { border: 1px solid #e7e5e4; padding: 0.4em 0.6em; text-align: left; }
+.chat-content th { background: #f5f5f4; font-weight: 600; }
+
+/* File upload zone */
+.upload-zone {
+  border: 2px dashed #d6d3d1;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+}
