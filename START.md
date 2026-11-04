@@ -1,4 +1,4 @@
-# 企业知识库问答系统 — 部署说明
+# 企业知识库问答系统 — 部署说明（Windows）
 
 > 面向全员的企业知识库 + 问答智能体：把散落文档整理成 AI 可用的结构化知识，实现引用可追溯的精准问答与数据统计。
 
@@ -15,42 +15,29 @@
 | 精排 | FlagEmbedding（bge-reranker-v2-m3） |
 | LLM | Anthropic 兼容 API（`deepseek-v4-pro`） |
 | 文档解析 | PyMuPDF / python-docx / openpyxl / xlrd / python-pptx / Tesseract OCR |
-| 旧格式转换 | `.doc`/`.ppt` → `.docx`/`.pptx`（LibreOffice 优先，MS Office 回退） |
+| 旧格式转换 | `.doc`/`.ppt` → `.docx`/`.pptx`（MS Office COM，Windows） |
 
 ---
 
 ## 二、环境要求
 
-### 本地开发（Windows）
-
-- Python 3.10+
-- Node.js 18+
-- NVIDIA GPU（可选）：RTX 4070 已测试；无 GPU 也能跑（慢）
-- MS Office（用于 `.doc`/`.ppt` 自动转换，可选）
-- Tesseract OCR（图片/扫描件识别，可选）
-
-### 服务器（Linux / Ubuntu）
-
-- Ubuntu 22.04 LTS（推荐）或 Debian
-- 内存 ≥ 8GB，磁盘 ≥ 50GB（模型 + 数据）
-- NVIDIA GPU（可选）：T4 / A10 / RTX 系列，8GB+ 显存
-- Python 3.10+、Node.js 18+、Tesseract、LibreOffice
+- **Python 3.10+**（安装时勾选 "Add to PATH"）
+- **Node.js 18+**
+- **Microsoft VC++ Redistributable**（PyTorch 依赖，`deploy.bat` 会自动检测并安装）
+- NVIDIA GPU（可选）：有则向量化/精排更快，无则 CPU 慢跑
+- MS Office（可选）：用于 `.doc`/`.ppt` 自动转换
+- Tesseract OCR（可选）：图片/扫描件文字识别
 
 ---
 
 ## 一键部署（推荐）
 
-拿项目到新机器，跑一个命令即可自动装依赖并启动：
+在项目根目录**双击 `deploy.bat`**，会自动完成：
 
-**Windows**（需已装 Python 3.10+ 和 Node 18+）：
-```cmd
-deploy.bat
-```
-
-**Linux / Ubuntu**（自动装系统依赖、Node、LibreOffice、Tesseract、nginx）：
-```bash
-bash deploy.sh
-```
+1. 检测并安装 VC++ 运行库（如缺失）
+2. 创建虚拟环境 + 安装后端依赖
+3. 安装前端依赖
+4. 同时启动后端（8000）和前端（5173）
 
 > 首次部署前，先配置 `backend/.env`（复制 `backend/.env.example` 改名 `.env`，填入 `ANTHROPIC_AUTH_TOKEN`）。
 
@@ -109,123 +96,52 @@ TESSERACT_CMD=
 
 ---
 
-## 四、服务器部署（Ubuntu 22.04）
+## 四、云服务器部署（Windows）
 
-### 1. 安装系统依赖
+### 1. 上传项目到服务器
 
-```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip nodejs npm \
-     tesseract-ocr tesseract-ocr-chi-sim libreoffice nginx
+- 本机跑 `package.bat` 生成 `kb-deploy.zip`（纯净版本，不含 venv/node_modules/data）
+- 上传 zip 到服务器并解压
+
+### 2. 配置密钥
+
+把 `backend\.env.example` 复制成 `backend\.env`，填入 `ANTHROPIC_AUTH_TOKEN`。
+
+### 3. 双击 `deploy.bat`
+
+自动装 VC++ 运行库 + 依赖 + 启动前后端。首次会下载模型（约 3.3GB），需几分钟。
+
+### 4. 放行端口（两层防火墙都要放）
+
+**阿里云安全组**（控制台）：入方向放行 `5173` 和 `8000`。
+
+**Windows 防火墙**（服务器上，管理员 cmd）：
+
+```cmd
+netsh advfirewall firewall add rule name="KB-Frontend" dir=in action=allow protocol=TCP localport=5173
+netsh advfirewall firewall add rule name="KB-Backend" dir=in action=allow protocol=TCP localport=8000
 ```
 
-> `libreoffice` 用于 `.doc`/`.ppt` 转换（Linux 下替代 MS Office）。
-> 若 GPU 服务器：另装 NVIDIA 驱动 + CUDA 12.1。
+### 5. 验证
 
-### 2. 后端
+本机浏览器访问：
 
-```bash
-cd /opt/app/backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
-```
-
-> GPU 服务器装 CUDA torch；纯 CPU 服务器直接用 requirements 里的 torch（CPU 版）。
-
-启动（生产，去掉 --reload）：
-
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-### 3. 前端构建 + nginx
-
-```bash
-cd /opt/app/frontend
-npm install
-npm run build        # 产出 dist/ 静态文件
-```
-
-nginx 配置（`/etc/nginx/sites-available/app`）：
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    root /opt/app/frontend/dist;
-    index index.html;
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-启用：
-
-```bash
-sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-### 4. 后端常驻（systemd 开机自启）
-
-创建 `/etc/systemd/system/kb.service`：
-
-```ini
-[Unit]
-Description=Knowledge Base Backend
-After=network.target
-
-[Service]
-WorkingDirectory=/opt/app/backend
-Environment=HF_ENDPOINT=https://hf-mirror.com
-ExecStart=/opt/app/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-Restart=always
-User=www-data
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now kb
-sudo systemctl status kb
-```
+- 后端：`http://服务器IP:8000/api/health` → 返回 `{"status":"ok"}`
+- 前端：`http://服务器IP:5173`
 
 ---
 
-## 五、服务器选型建议
+## 五、上线前注意
 
-| 方案 | 配置 | 说明 |
-|---|---|---|
-| **省成本（CPU）** | 4C8G + 50GB SSD | 能跑，embedding 慢、reranker 退回关键词，适合低频使用 |
-| **推荐（GPU）** | 4C8G + 50GB SSD + T4(16GB) | embedding+reranker 走 GPU（约 3.5GB 显存），问答快 |
-| 操作系统 | **Ubuntu 22.04 LTS** | Python 生态最顺，依赖安装简单 |
-
-> CPU 模式修改：`backend/app/core/embeddings.py` 里 `device="cuda"` 改成 `device="cpu"`；reranker 会自动走 CPU fallback。
+1. **VC++ 运行库**：`deploy.bat` 已自动检测安装；手动部署时若报 `c10.dll` / `vcruntime140.dll` 加载失败，装 `https://aka.ms/vs/16/release/vc_redist.x64.exe`。
+2. **`.doc`/`.ppt` 转换**：Windows 上依赖 MS Office，没装 Office 则旧版 Word/PPT 无法转换（其余格式不受影响）。
+3. **Tesseract 路径**：自动探测——优先读 `.env` 的 `TESSERACT_CMD`，否则找系统 `tesseract`，再退回 `D:\tools\TesseractOCR\tesseract.exe`。
+4. **密钥安全**：`.env` 里的 `ANTHROPIC_AUTH_TOKEN`、`JWT_SECRET` 要改，且不要把 `.env` 提交到 git。
+5. **首次启动慢**：首次会下载 bge 模型（约 3.3GB），走 `hf-mirror.com` 加速。
 
 ---
 
-## 六、上线前注意
-
-1. **`.doc`/`.ppt` 转换**：已兼容——优先用 LibreOffice（Linux 装 `libreoffice`），没有则回退 MS Office（Windows）。
-2. **Tesseract 路径**：已自动探测——优先读 `.env` 的 `TESSERACT_CMD`，否则自动找系统 `tesseract`，再退回 Windows 默认路径。
-3. **密钥安全**：`.env` 里的 `ANTHROPIC_AUTH_TOKEN`、`JWT_SECRET` 要改，且不要把 `.env` 提交到 git。
-4. **CORS**：前端走 nginx 同域后，CORS 配置可保留（同域请求不触发 CORS）。
-
----
-
-## 七、支持的文档格式
+## 六、支持的文档格式
 
 | 格式 | 扩展名 |
 |---|---|
@@ -241,7 +157,7 @@ sudo systemctl status kb
 
 ---
 
-## 八、功能清单
+## 七、功能清单
 
 - ✅ 20+ 文档格式解析（含表格、扫描件 OCR、GBK 编码识别）
 - ✅ 混合检索：向量 + BM25 + RRF 融合 + Cross-Encoder 精排
@@ -254,11 +170,11 @@ sudo systemctl status kb
 
 ---
 
-## 九、数据存储位置
+## 八、数据存储位置
 
 | 数据 | 路径 |
 |---|---|
 | SQLite 数据库 | `backend/data/app.db` |
 | ChromaDB 向量库 | `backend/data/chroma/` |
 | 上传文件 | `backend/data/uploads/{tenant_id}/{kb_id}/` |
-| 模型缓存 | `~/.cache/huggingface/hub/`（约 3.3GB） |
+| 模型缓存 | `C:\Users\{用户}\.cache\huggingface\hub\`（约 3.3GB） |

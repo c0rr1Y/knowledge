@@ -22,6 +22,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Microsoft VC++ Redistributable is required by PyTorch (torch)
+if not exist "%SystemRoot%\System32\vcruntime140.dll" (
+    echo [0/4] Installing Microsoft VC++ Redistributable...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/16/release/vc_redist.x64.exe' -OutFile $env:TEMP\vc_redist.x64.exe"
+    "%TEMP%\vc_redist.x64.exe" /install /quiet /norestart
+    echo     VC++ Redistributable installed.
+)
+
 echo [1/4] Installing backend dependencies...
 cd /d "%ROOT%backend"
 if not exist venv (
