@@ -9,11 +9,13 @@ _embedding_model: Optional[SentenceTransformer] = None
 
 
 def get_embedding_model() -> SentenceTransformer:
-    """Get or create the embedding model singleton (GPU if available)."""
+    """Get or create the embedding model singleton (GPU if available, else CPU)."""
     global _embedding_model
     if _embedding_model is None:
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         _embedding_model = SentenceTransformer(
             settings.embedding_model,
-            device="cuda",  # Use NVIDIA GPU (RTX 4070)
+            device=device,
         )
     return _embedding_model
