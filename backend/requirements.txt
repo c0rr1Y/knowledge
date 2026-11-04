@@ -15,7 +15,7 @@ huggingface-hub==0.26.5
 chromadb==0.5.23
 
 # Embedding (bge-large-zh-v1.5)
-transformers==4.46.3
+transformers==4.44.2
 sentence-transformers==3.3.1
 
 # GPU runtime (CUDA 12.1)
